@@ -1,0 +1,679 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OpenClaw 一键部署</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        min-height: 100vh;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+      }
+      .container {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        padding: 40px;
+        max-width: 550px;
+        width: 100%;
+      }
+      .logo {
+        text-align: center;
+        margin-bottom: 30px;
+      }
+      .logo h1 {
+        color: #333;
+        font-size: 28px;
+        margin-bottom: 10px;
+      }
+      .logo p {
+        color: #666;
+        font-size: 14px;
+      }
+
+      /* 环境状态卡片 */
+      .env-card {
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+      }
+      .env-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .env-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 1px solid #eee;
+      }
+      .env-item:last-child {
+        border-bottom: none;
+      }
+      .env-label {
+        color: #666;
+        font-size: 13px;
+      }
+      .env-value {
+        font-weight: 500;
+        font-size: 13px;
+      }
+      .env-value.ok {
+        color: #28a745;
+      }
+      .env-value.warn {
+        color: #ffc107;
+      }
+      .env-value.error {
+        color: #dc3545;
+      }
+
+      .status-card {
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+      }
+      .status-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 0;
+        border-bottom: 1px solid #eee;
+      }
+      .status-item:last-child {
+        border-bottom: none;
+      }
+      .status-label {
+        color: #666;
+        font-size: 14px;
+      }
+      .status-value {
+        font-weight: 600;
+        color: #333;
+      }
+      .status-value.running {
+        color: #28a745;
+      }
+      .status-value.stopped {
+        color: #dc3545;
+      }
+
+      .btn {
+        width: 100%;
+        padding: 14px 20px;
+        font-size: 15px;
+        font-weight: 600;
+        border: none;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        margin-bottom: 10px;
+      }
+      .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+      }
+      .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+      }
+      .btn-primary:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+      }
+      .btn-danger {
+        background: #dc3545;
+        color: white;
+      }
+      .btn-danger:hover {
+        background: #c82333;
+      }
+      .btn-success {
+        background: #28a745;
+        color: white;
+      }
+      .btn-warning {
+        background: #ffc107;
+        color: #333;
+      }
+      .btn-warning:hover {
+        background: #e0a800;
+      }
+
+      .console {
+        background: #1e1e1e;
+        color: #0f0;
+        font-family: "Monaco", "Menlo", monospace;
+        font-size: 12px;
+        border-radius: 10px;
+        padding: 15px;
+        max-height: 200px;
+        overflow-y: auto;
+        margin-top: 20px;
+        display: none;
+      }
+      .console.show {
+        display: block;
+      }
+      .console-line {
+        margin-bottom: 5px;
+        word-break: break-all;
+      }
+      .console-line.error {
+        color: #f44336;
+      }
+      .console-line.info {
+        color: #2196f3;
+      }
+      .console-line.warn {
+        color: #ffc107;
+      }
+
+      .loading {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border: 2px solid #ffffff;
+        border-radius: 50%;
+        border-top-color: transparent;
+        animation: spin 1s linear infinite;
+        margin-right: 8px;
+        vertical-align: middle;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .dashboard-link {
+        display: block;
+        text-align: center;
+        margin-top: 20px;
+        color: #667eea;
+        text-decoration: none;
+        font-size: 14px;
+      }
+      .dashboard-link:hover {
+        text-decoration: underline;
+      }
+
+      /* 模态框 */
+      .modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+        justify-content: center;
+        align-items: center;
+      }
+      .modal-overlay.show {
+        display: flex;
+      }
+      .modal {
+        background: white;
+        border-radius: 16px;
+        padding: 30px;
+        max-width: 450px;
+        width: 90%;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      }
+      .modal h3 {
+        margin-bottom: 15px;
+        color: #333;
+      }
+      .modal p {
+        color: #666;
+        margin-bottom: 20px;
+        line-height: 1.6;
+      }
+      .modal .btn-group {
+        display: flex;
+        gap: 10px;
+      }
+      .modal .btn-group .btn {
+        margin-bottom: 0;
+      }
+
+      .terminal {
+        background: #1e1e1e;
+        color: #0f0;
+        font-family: "Monaco", "Menlo", monospace;
+        font-size: 12px;
+        border-radius: 8px;
+        padding: 15px;
+        margin: 15px 0;
+        max-height: 150px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="logo">
+        <h1>🦞 OpenClaw</h1>
+        <p>一键部署管理面板</p>
+      </div>
+
+      <!-- 环境检查 -->
+      <div class="env-card" id="envCard">
+        <div class="env-title">📋 环境检查</div>
+        <div class="env-item">
+          <span class="env-label">Node.js</span>
+          <span class="env-value" id="nodeStatus">检查中...</span>
+        </div>
+        <div class="env-item">
+          <span class="env-label">OpenClaw CLI</span>
+          <span class="env-value" id="cliStatus">检查中...</span>
+        </div>
+        <div class="env-item">
+          <span class="env-label">OpenClaw 配置</span>
+          <span class="env-value" id="configStatus">检查中...</span>
+        </div>
+      </div>
+
+      <!-- 服务状态 -->
+      <div class="status-card">
+        <div class="status-item">
+          <span class="status-label">Gateway 服务</span>
+          <span class="status-value" id="gatewayStatus">检测中...</span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">WebSocket 端口</span>
+          <span class="status-value" id="gatewayPort">18789</span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">控制面板</span>
+          <span class="status-value" id="dashboardUrl">-</span>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" id="deployBtn" onclick="deploy()">
+        🚀 一键部署
+      </button>
+
+      <button
+        class="btn btn-danger"
+        id="stopBtn"
+        onclick="stopGateway()"
+        style="display: none">
+        ⬛ 停止服务
+      </button>
+
+      <button
+        class="btn btn-warning"
+        id="uninstallBtn"
+        onclick="uninstallOpenClaw()"
+        style="display: none; margin-top: 10px; font-size: 13px; padding: 10px">
+        🗑️ 卸载 OpenClaw
+      </button>
+
+      <div class="console" id="console"></div>
+
+      <a
+        href="http://127.0.0.1:18789/"
+        target="_blank"
+        class="dashboard-link"
+        id="dashboardLink"
+        style="display: none">
+        打开控制面板 →
+      </a>
+    </div>
+
+    <!-- 安装模态框 -->
+    <div class="modal-overlay" id="installModal">
+      <div class="modal">
+        <h3>📦 需要安装 OpenClaw</h3>
+        <p>检测到您的电脑上还没有安装 OpenClaw。<br />点击下方按钮开始安装：</p>
+        <div class="terminal" id="installOutput">准备安装...</div>
+        <div class="btn-group">
+          <button
+            class="btn btn-primary"
+            id="installBtn"
+            onclick="installOpenClaw()">
+            开始安装
+          </button>
+          <button class="btn btn-warning" onclick="closeModal('installModal')">
+            取消
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 配置模态框 -->
+    <div class="modal-overlay" id="setupModal">
+      <div class="modal">
+        <h3>⚙️ 需要配置 OpenClaw</h3>
+        <p>OpenClaw 已安装，但还没有配置。<br />配置过程需要：</p>
+        <ul style="color: #666; margin-bottom: 15px; padding-left: 20px">
+          <li>配置 API Key / 模型</li>
+          <li>连接聊天渠道 (Telegram/Discord等)</li>
+          <li>设置工作空间</li>
+        </ul>
+        <p style="font-size: 13px; color: #999">
+          点击"开始配置"后，请在终端中完成交互式配置向导。
+        </p>
+        <div class="btn-group">
+          <button class="btn btn-primary" onclick="setupOpenClaw()">
+            开始配置
+          </button>
+          <button class="btn btn-warning" onclick="closeModal('setupModal')">
+            取消
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let isDeploying = false;
+
+      // 检查环境
+      async function checkEnv() {
+        try {
+          const response = await fetch("/api/check-env");
+          const data = await response.json();
+
+          // Node.js 状态
+          const nodeEl = document.getElementById("nodeStatus");
+          if (data.nodeOk) {
+            nodeEl.textContent = data.nodeVersion;
+            nodeEl.className = "env-value ok";
+          } else {
+            nodeEl.textContent = "未安装";
+            nodeEl.className = "env-value error";
+          }
+
+          // CLI 状态
+          const cliEl = document.getElementById("cliStatus");
+          if (data.installed) {
+            cliEl.textContent = "已安装 ✅";
+            cliEl.className = "env-value ok";
+          } else {
+            cliEl.textContent = "未安装";
+            cliEl.className = "env-value error";
+          }
+
+          // 配置状态
+          const configEl = document.getElementById("configStatus");
+          if (data.configured) {
+            configEl.textContent = "已配置 ✅";
+            configEl.className = "env-value ok";
+          } else {
+            configEl.textContent = "未配置";
+            configEl.className = "env-value warn";
+          }
+
+          return data;
+        } catch (e) {
+          console.error("检查环境失败:", e);
+          return null;
+        }
+      }
+
+      // 检查服务状态
+      async function checkStatus() {
+        try {
+          const response = await fetch("/api/gateway-status");
+          const data = await response.json();
+
+          const statusEl = document.getElementById("gatewayStatus");
+          const deployBtn = document.getElementById("deployBtn");
+          const stopBtn = document.getElementById("stopBtn");
+          const dashboardLink = document.getElementById("dashboardLink");
+          const uninstallBtn = document.getElementById("uninstallBtn");
+
+          if (data.running) {
+            statusEl.textContent = "✅ 运行中";
+            statusEl.className = "status-value running";
+            document.getElementById("dashboardUrl").innerHTML =
+              '<a href="http://127.0.0.1:18789/" target="_blank" style="color: #667eea;">http://127.0.0.1:18789/</a>';
+            deployBtn.textContent = "🔄 重启服务";
+            deployBtn.disabled = false;
+            stopBtn.style.display = "block";
+            dashboardLink.style.display = "block";
+          } else {
+            statusEl.textContent = "❌ 已停止";
+            statusEl.className = "status-value stopped";
+            document.getElementById("dashboardUrl").textContent = "-";
+            deployBtn.textContent = "🚀 启动服务";
+            deployBtn.disabled = false;
+            stopBtn.style.display = "none";
+            dashboardLink.style.display = "none";
+          }
+
+          // 检查是否显示卸载按钮（仅当 CLI 已安装时）
+          const envData = await checkEnv();
+          if (envData && envData.installed) {
+            uninstallBtn.style.display = "block";
+          } else {
+            uninstallBtn.style.display = "none";
+          }
+        } catch (e) {
+          console.error("检查状态失败:", e);
+        }
+      }
+
+      // 部署
+      async function deploy() {
+        if (isDeploying) return;
+        isDeploying = true;
+
+        const consoleEl = document.getElementById("console");
+        const deployBtn = document.getElementById("deployBtn");
+
+        consoleEl.classList.add("show");
+        consoleEl.innerHTML = "";
+        log("开始部署...", "info");
+
+        deployBtn.disabled = true;
+        deployBtn.innerHTML = '<span class="loading"></span>部署中...';
+
+        try {
+          const response = await fetch("/api/deploy", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+          });
+          const result = await response.json();
+
+          if (result.needInstall) {
+            log("❌ 未安装 OpenClaw", "error");
+            deployBtn.disabled = false;
+            deployBtn.textContent = "🚀 一键部署";
+            showModal("installModal");
+          } else if (result.needSetup) {
+            log("❌ OpenClaw 未配置", "error");
+            deployBtn.disabled = false;
+            deployBtn.textContent = "🚀 一键部署";
+            showModal("setupModal");
+          } else if (result.success) {
+            log("✅ 部署命令已执行", "info");
+            log("等待服务启动...", "info");
+            await waitForService(15000);
+            log("🎉 部署完成!", "info");
+            deployBtn.textContent = "✅ 已部署";
+            checkStatus();
+          } else {
+            log("❌ 部署失败: " + result.message, "error");
+            deployBtn.disabled = false;
+            deployBtn.textContent = "🔄 重试";
+          }
+        } catch (e) {
+          log("❌ 错误: " + e.message, "error");
+          deployBtn.disabled = false;
+          deployBtn.textContent = "🔄 重试";
+        }
+
+        isDeploying = false;
+      }
+
+      // 安装 OpenClaw
+      async function installOpenClaw() {
+        const btn = document.getElementById("installBtn");
+        const output = document.getElementById("installOutput");
+
+        btn.disabled = true;
+        btn.innerHTML = '<span class="loading"></span>安装中...';
+        output.textContent = "正在执行: npm install -g openclaw\n\n";
+
+        try {
+          const response = await fetch("/api/install", { method: "POST" });
+          const result = await response.json();
+
+          if (result.success) {
+            output.textContent += "✅ 安装成功!\n\n请刷新页面后继续。";
+            btn.textContent = "✅ 已安装";
+            setTimeout(() => {
+              closeModal("installModal");
+              location.reload();
+            }, 2000);
+          } else {
+            output.textContent += "❌ 安装失败: " + result.message;
+            btn.disabled = false;
+            btn.textContent = "重试安装";
+          }
+        } catch (e) {
+          output.textContent += "❌ 错误: " + e.message;
+          btn.disabled = false;
+          btn.textContent = "重试安装";
+        }
+      }
+
+      // 配置 OpenClaw
+      async function setupOpenClaw() {
+        closeModal("setupModal");
+        log("开始配置 OpenClaw...", "warn");
+        log("请在弹出的终端窗口中完成配置", "warn");
+
+        // 打开终端执行配置
+        const terminal = document.createElement("a");
+        terminal.href = "iterm://exec?cmd=openclaw%20configure";
+        terminal.click();
+      }
+
+      // 停止服务
+      async function stopGateway() {
+        if (!confirm("确定要停止 Gateway 服务吗？")) return;
+
+        const stopBtn = document.getElementById("stopBtn");
+        stopBtn.disabled = true;
+        stopBtn.innerHTML = '<span class="loading"></span>停止中...';
+
+        try {
+          const response = await fetch("/api/stop", { method: "POST" });
+          const result = await response.json();
+
+          if (result.success) {
+            // 立即检查状态
+            await checkStatus();
+            log("✅ 服务已停止", "info");
+          }
+          alert(result.message);
+        } catch (e) {
+          alert("错误: " + e.message);
+        }
+
+        stopBtn.disabled = false;
+        stopBtn.innerHTML = '<span class=""></span> ⬛ 停止服务';
+        await checkStatus();
+      }
+
+      // 卸载 OpenClaw
+      async function uninstallOpenClaw() {
+        if (
+          !confirm(
+            "确定要卸载 OpenClaw 吗？\n\n这将：\n1. 停止 Gateway 服务\n2. 卸载 openclaw npm 包\n\n注意：不会删除配置文件和数据。",
+          )
+        )
+          return;
+
+        const uninstallBtn = document.getElementById("uninstallBtn");
+        uninstallBtn.disabled = true;
+        uninstallBtn.innerHTML = '<span class="loading"></span>卸载中...';
+
+        try {
+          const response = await fetch("/api/uninstall", { method: "POST" });
+          const result = await response.json();
+
+          if (result.success) {
+            alert("✅ OpenClaw 已卸载");
+            location.reload();
+          } else {
+            alert("❌ 卸载失败: " + result.message);
+            uninstallBtn.disabled = false;
+            uninstallBtn.textContent = "🗑️ 卸载 OpenClaw";
+          }
+        } catch (e) {
+          alert("错误: " + e.message);
+          uninstallBtn.disabled = false;
+        }
+      }
+
+      // 等待服务
+      async function waitForService(timeout) {
+        const start = Date.now();
+        while (Date.now() - start < timeout) {
+          try {
+            await fetch("/api/gateway-status", {
+              signal: AbortSignal.timeout(2000),
+            });
+            return true;
+          } catch (e) {
+            await new Promise((r) => setTimeout(r, 1000));
+          }
+        }
+        return false;
+      }
+
+      // 工具函数
+      function log(message, type = "") {
+        const consoleEl = document.getElementById("console");
+        const line = document.createElement("div");
+        line.className = "console-line " + type;
+        line.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+        consoleEl.appendChild(line);
+        consoleEl.scrollTop = consoleEl.scrollHeight;
+      }
+
+      function showModal(id) {
+        document.getElementById(id).classList.add("show");
+      }
+
+      function closeModal(id) {
+        document.getElementById(id).classList.remove("show");
+      }
+
+      // 初始化
+      checkEnv();
+      checkStatus();
+      setInterval(() => {
+        checkEnv();
+        checkStatus();
+      }, 10000);
+    </script>
+  </body>
+</html>
