@@ -1,3 +1,1 @@
-# 添加忽略项
-echo "node_modules/" > .gitignore
-echo ".env" >> .gitignore
+node_modules/
